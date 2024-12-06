@@ -85,7 +85,7 @@ func main() {
 			"msg":  string(output),
 		})
 	})
-	err := r.Run("127.0.0.1:8082") // 监听并在 0.0.0.0:8080 上启动服务
+	err := r.Run(":8082") // 监听并在 0.0.0.0:8080 上启动服务
 	if err != nil {
 		log.Fatalln(err)
 	}
