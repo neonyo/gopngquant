@@ -38,6 +38,7 @@ func main() {
 		}
 		defer RemoveFile(inputFile, 30*time.Second)
 		outputFile := GetLocalFile(ext)
+
 		//fmt.Println(fmt.Sprintf("pngquant --quality=65-80 %s --output %s", inputFile, outputFile))
 		cmd := exec.Command("pngquant", "--quality=40-80", inputFile, "--output", outputFile, "--speed=10")
 		var o bytes.Buffer
