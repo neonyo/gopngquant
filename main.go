@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"net/url"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"pngquant/oss"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -22,17 +20,10 @@ type Url struct {
 
 func main() {
 	r := gin.Default()
+	r.Static("/temp", "./temp")
 	r.POST("/compress", func(c *gin.Context) {
-		var req Url
-		err := c.ShouldBindJSON(&req)
-		if err != nil {
-			c.JSON(200, gin.H{
-				"code": 400,
-				"msg":  err.Error(),
-			})
-			return
-		}
-		ext := filepath.Ext(req.Url)
+		file, err := c.FormFile("file")
+		ext := filepath.Ext(file.Filename)
 		if ext == "" {
 			c.JSON(200, gin.H{
 				"code": 400,
@@ -40,21 +31,14 @@ func main() {
 			})
 			return
 		}
-		parsedURL, _ := url.Parse(req.Url)
-		path := strings.TrimLeft(parsedURL.Path, "/")
 		inputFile := GetLocalFile(ext)
-		fmt.Println(path, inputFile, "---")
-		err = oss.Client.GetImg(path, inputFile)
-		if err != nil {
-			c.JSON(200, gin.H{
-				"code": 400,
-				"msg":  err.Error(),
-			})
+		if err = c.SaveUploadedFile(file, inputFile); err != nil {
+			c.String(http.StatusBadRequest, "保存文件错误： %s", err.Error())
 			return
 		}
 		defer RemoveFile(inputFile, 30*time.Second)
-		outFile := GetLocalFile(ext)
-		cmd := exec.Command("pngquant", "--quality=65-80", inputFile, "--output", outFile)
+		outputFile := GetLocalFile(ext)
+		cmd := exec.Command("pngquant", "--quality=65-80", inputFile, "--output", outputFile)
 		var o bytes.Buffer
 		cmd.Stdout = &o
 		err = cmd.Run()
@@ -66,16 +50,11 @@ func main() {
 			return
 		}
 		output := o.Bytes()
-
 		if len(output) == 0 {
-			defer RemoveFile(outFile, 30*time.Second)
-			ossFilePath := GetOssFile(ext)
-			contentType := GetContentType(ext)
-			var ossUrl string
-			ossUrl, err = oss.Client.PutImg(outFile, ossFilePath, contentType)
+			defer RemoveFile(outputFile, 60*time.Second)
 			c.JSON(200, gin.H{
 				"code": 200,
-				"data": ossUrl,
+				"data": outputFile,
 				"msg":  "ok",
 			})
 			return
@@ -110,30 +89,9 @@ func RemoveFile(filePath string, delay time.Duration) {
 	}()
 }
 
-func GetOssFile(ext string) string {
-	now := time.Now()
-	rand.New(rand.NewSource(time.Now().UnixNano()))
-	threeDigitRand := rand.Intn(9000) + 1000
-	return fmt.Sprintf("newCrm/%d/%d/%d%d%s", now.Year(), now.Month(), now.UnixMilli(), threeDigitRand, ext)
-}
-
 func GetLocalFile(ext string) string {
 	now := time.Now()
 	rand.New(rand.NewSource(time.Now().UnixNano()))
 	threeDigitRand := rand.Intn(9000) + 1000
 	return fmt.Sprintf("temp/%d%d%d%d%s", now.Year(), now.Month(), now.UnixMilli(), threeDigitRand, ext)
-}
-
-func GetContentType(ext string) string {
-	if ext == "" {
-		return ""
-	}
-	switch strings.ToUpper(ext[1:]) {
-	case "PNG":
-		return "image/png"
-	case "JPG", "JPEG":
-		return "image/jpeg"
-	default:
-		return ""
-	}
 }
