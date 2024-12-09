@@ -38,11 +38,14 @@ func main() {
 		}
 		defer RemoveFile(inputFile, 30*time.Second)
 		outputFile := GetLocalFile(ext)
+		//fmt.Println(fmt.Sprintf("pngquant --quality=65-80 %s --output %s", inputFile, outputFile))
 		cmd := exec.Command("pngquant", "--quality=65-80", inputFile, "--output", outputFile)
 		var o bytes.Buffer
 		cmd.Stdout = &o
 		err = cmd.Run()
+		fmt.Println(cmd.String(), "----cmd-----")
 		if err != nil {
+			fmt.Println("1=====")
 			c.JSON(200, gin.H{
 				"code": 400,
 				"msg":  err.Error(),
@@ -50,6 +53,7 @@ func main() {
 			return
 		}
 		output := o.Bytes()
+		fmt.Println(string(output), "=====")
 		if len(output) == 0 {
 			defer RemoveFile(outputFile, 60*time.Second)
 			c.JSON(200, gin.H{
