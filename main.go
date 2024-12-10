@@ -40,6 +40,7 @@ func main() {
 		outputFile := GetLocalFile(ext)
 
 		//fmt.Println(fmt.Sprintf("pngquant --quality=65-80 %s --output %s", inputFile, outputFile))
+		fmt.Println(time.Now().Format("2006-01-02 15:04:05"))
 		cmd := exec.Command("pngquant", "--quality=40-80", inputFile, "--output", outputFile, "--speed=10")
 		var o bytes.Buffer
 		cmd.Stdout = &o
@@ -53,6 +54,7 @@ func main() {
 			})
 			return
 		}
+		fmt.Println(time.Now().Format("2006-01-02 15:04:05"))
 		output := o.Bytes()
 		fmt.Println(string(output), "=====")
 		if len(output) == 0 {
